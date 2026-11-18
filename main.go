@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"math/rand/v2"
@@ -17,7 +18,18 @@ type GameResult struct {
 	Attempts int    `json:"attempts"`
 }
 
+const (
+	Green  = "\033[32m"
+	Red    = "\033[31m"
+	Yellow = "\033[33m"
+	Reset  = "\033[0m"
+)
+
+var errInputClosed = errors.New("ввод завершен")
+var errInvalidNumber = errors.New("Введите только числовое значение")
+
 func main() {
+
 	scanner := bufio.NewScanner(os.Stdin)
 	var maxNumber int
 	var maxAttempts int
@@ -88,22 +100,31 @@ func findNumber(scanner *bufio.Scanner, maxNumber int, maxAttempts int) (string,
 	previosNumbers := []int{}
 	attempts := 0
 	for attempts < maxAttempts {
-		if scanner.Scan() {
-			input := scanner.Text()
-			number, err := strconv.Atoi(input)
-			if err != nil {
-				fmt.Println("Введите числовое значение")
+		fmt.Println("Введите число")
+		fmt.Println(Yellow+"попытка", attempts+1, Reset)
+		for {
+			number, err := enterNumber(scanner)
+			if errors.Is(err, errInputClosed) {
+				fmt.Println("Ввод закончен")
+				return "проигрыш", attempts
+			} else if errors.Is(err, errInvalidNumber) {
+				fmt.Println("Введите только числовое значение")
 				continue
+			} else if err != nil {
+				fmt.Println("Ошибка ввода")
+				return "проигрыш", attempts
 			}
+
+			attempts++
 			previosNumbers = append(previosNumbers, number)
 			fmt.Println("предыдущие попытки: ", previosNumbers)
-			fmt.Println("Ты ввёл:", input)
-			attempts++
+			fmt.Println("Ты ввёл:", number)
 
 			if number == secretNumber {
-				fmt.Println("ты угадал!")
+				fmt.Println(Green + "ты угадал!" + Reset)
 				return "победа", attempts
 			}
+
 			difference := math.Abs(float64(number - secretNumber))
 			if difference <= 5 {
 				fmt.Println("горячо")
@@ -112,20 +133,24 @@ func findNumber(scanner *bufio.Scanner, maxNumber int, maxAttempts int) (string,
 			} else {
 				fmt.Println("холодно")
 			}
+			if number < secretNumber {
+				fmt.Println("загаданное число больше")
+			} else {
+				fmt.Println("загаданное число меньше")
+			}
 
 			if attempts == maxAttempts {
-				fmt.Println("ты проиграл , попробуй еще раз")
+				fmt.Println(Red + "ты проиграл , попробуй еще раз" + Reset)
 				fmt.Println("правильный ответ ", secretNumber)
 
 			}
-		} else {
-			if err := scanner.Err(); err != nil {
-				fmt.Println("Ошибка чтения:", err)
-			}
+			break
 		}
 	}
+
 	return "проигрыш", attempts
 }
+
 func saveResult(result string, attempts int) error {
 	currenttime := time.Now().Format("2006-01-02 15:04:05")
 	save := GameResult{
@@ -154,4 +179,21 @@ func saveResult(result string, attempts int) error {
 		return err
 	}
 	return nil
+}
+func enterNumber(scanner *bufio.Scanner) (int, error) {
+	if scanner.Scan() {
+		input := scanner.Text()
+		number, err := strconv.Atoi(input)
+		if err != nil {
+			return 0, errInvalidNumber
+		} else {
+			return number, nil
+		}
+	} else {
+		if err := scanner.Err(); err != nil {
+			return 0, errors.New("errorEnter")
+		} else {
+			return 0, errInputClosed
+		}
+	}
 }
