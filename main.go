@@ -120,25 +120,21 @@ func findNumber(scanner *bufio.Scanner, maxNumber int, maxAttempts int) (string,
 			fmt.Println("предыдущие попытки: ", previosNumbers)
 			fmt.Println("Ты ввёл:", number)
 
-			if number == secretNumber {
-				fmt.Println(Green + "ты угадал!" + Reset)
+			value := guessNumber(number, secretNumber)
+			switch value {
+			case "win":
+				fmt.Println("ты угадал!")
 				return "победа", attempts
-			}
-
-			difference := math.Abs(float64(number - secretNumber))
-			if difference <= 5 {
-				fmt.Println("горячо")
-			} else if difference <= 15 {
-				fmt.Println("тепло")
-			} else {
-				fmt.Println("холодно")
-			}
-			if number < secretNumber {
+			case "less":
 				fmt.Println("загаданное число больше")
-			} else {
+			default:
 				fmt.Println("загаданное число меньше")
 			}
 
+			hint := getHint(number, secretNumber)
+			switch hint {
+			case "hot":
+			}
 			if attempts == maxAttempts {
 				fmt.Println(Red + "ты проиграл , попробуй еще раз" + Reset)
 				fmt.Println("правильный ответ ", secretNumber)
@@ -195,5 +191,24 @@ func enterNumber(scanner *bufio.Scanner) (int, error) {
 		} else {
 			return 0, errInputClosed
 		}
+	}
+}
+func guessNumber(number int, secretNumber int) string {
+	if number == secretNumber {
+		return "win"
+	} else if number < secretNumber {
+		return "less"
+	} else {
+		return "greater"
+	}
+}
+func getHint(secretNumber int, number int) string {
+	difference := math.Abs(float64(number - secretNumber))
+	if difference <= 5 {
+		return "hot"
+	} else if difference <= 15 {
+		return "warm"
+	} else {
+		return "cold"
 	}
 }
